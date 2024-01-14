@@ -1,6 +1,5 @@
 <template>
   <div class="log-viewer">
-    <h2>BlueOS System Log Viewer</h2>
     <div v-if="logData && logData.length" class="log-content">
       <div v-for="(log, index) in logData" :key="index" class="log-entry">
         <h3>{{ log.serviceName }} - {{ formatDate(log.dateTime) }}</h3>
