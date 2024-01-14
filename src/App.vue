@@ -7,7 +7,7 @@
     </div>
     <div v-if="allLogs.length">
       <select v-model="selectedService">
-        <option v-for="service in availableServices" :key="service" :value="service">{{ service }}</option>
+        <option v-for="service in availableServices.sort()" :key="service" :value="service">{{ service }}</option>
       </select>
       <log-viewer :logData="filteredLogs"></log-viewer>
     </div>
