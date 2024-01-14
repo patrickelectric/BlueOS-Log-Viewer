@@ -10,7 +10,7 @@ import JSZip from 'jszip';
 import pako from 'pako';
 
 export default {
-  emits: ['logs-updated'],
+  emits: ['logs-updated', 'processing'],
   setup(props, { emit }) {
     const fileContent = ref(null);
 
@@ -23,16 +23,28 @@ export default {
       const zip = await JSZip.loadAsync(file);
       const allLogs = [];
 
+      let currentServiceName = null
+      let numberOfGz = 0
       for (const fileName of Object.keys(zip.files)) {
         console.log(`${fileName}`)
         const serviceName = extractServiceName(fileName);
         const dateTime = extractDateTime(fileName);
         console.log(`${serviceName} -> ${dateTime}`)
+        emit('processing', fileName)
         if (dateTime == null) {
           continue
         }
 
         if (fileName.endsWith('.gz')) {
+          if (currentServiceName != serviceName) {
+            numberOfGz = 0
+            currentServiceName = serviceName
+          }
+          if (numberOfGz > 5) {
+            console.log("Skip")
+            continue
+          }
+          numberOfGz += 1
           const gzippedData = await zip.files[fileName].async('uint8array');
           let content = `File: ${fileName}\n\n`
           content += pako.inflate(gzippedData, { to: 'string' });
