@@ -79,7 +79,10 @@ impl egui_dock::TabViewer for TabViewer {
                 }
                 if *current_filter != *filter {
                     *filter = current_filter;
-                    let regex = regex::Regex::new(filter).unwrap();
+                    let regex = regex::RegexBuilder::new(filter)
+                        .case_insensitive(true)
+                        .build()
+                        .unwrap();
                     *filtered_entries = entries
                         .iter()
                         .filter(|entry| {
