@@ -1,6 +1,6 @@
 use crate::parser::{self, LogEntry};
 use chrono::{DateTime, Utc};
-use egui::{Color32, RichText};
+use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
 use std::sync::{Arc, Mutex};
 
@@ -10,6 +10,7 @@ struct TabContent {
     filter: String,
     //TODO: Move this to reference
     filtered_entries: Vec<LogEntry>,
+    rx: regex::Regex,
 }
 
 impl TabContent {
@@ -19,6 +20,7 @@ impl TabContent {
             entries,
             filter: Default::default(),
             filtered_entries: Default::default(),
+            rx: regex::Regex::new("").unwrap(),
         }
     }
 }
@@ -64,6 +66,7 @@ impl egui_dock::TabViewer for TabViewer {
         let entries = &tab.entries;
         let filter = &mut tab.filter;
         let filtered_entries = &mut tab.filtered_entries;
+        let rx = &mut tab.rx;
 
         if filter.is_empty() && filtered_entries.is_empty() {
             *filtered_entries = entries.clone();
@@ -79,16 +82,16 @@ impl egui_dock::TabViewer for TabViewer {
                 }
                 if *current_filter != *filter {
                     *filter = current_filter;
-                    let regex = regex::RegexBuilder::new(filter)
+                    *rx = regex::RegexBuilder::new(filter)
                         .case_insensitive(true)
                         .build()
                         .unwrap();
                     *filtered_entries = entries
                         .iter()
                         .filter(|entry| {
-                            regex.captures(&entry.message).is_some()
-                                || regex.captures(&entry.level.to_string()).is_some()
-                                || regex.captures(&entry.timestamp.to_string()).is_some()
+                            rx.captures(&entry.message).is_some()
+                                || rx.captures(&entry.level.to_string()).is_some()
+                                || rx.captures(&entry.timestamp.to_string()).is_some()
                         })
                         .map(Clone::clone)
                         .collect();
@@ -149,7 +152,11 @@ impl egui_dock::TabViewer for TabViewer {
                             ui.label(RichText::new(entry.level.to_string()).color(color));
                         });
                         row.col(|ui| {
-                            ui.label(entry.message.to_string());
+                            if filter.is_empty() {
+                                ui.label(entry.message.to_string());
+                            } else {
+                                highlight_text_in_ui(ui, entry.message.as_str(), rx);
+                            }
                         });
 
                         if row.response().clicked() {
@@ -160,6 +167,51 @@ impl egui_dock::TabViewer for TabViewer {
                 });
         });
     }
+}
+
+fn highlight_text_in_ui(ui: &mut egui::Ui, message: &str, rx: &regex::Regex) {
+    let mut last_end = 0;
+
+    let mut job = LayoutJob::default();
+
+    // Iterate over all matches in the message
+    for mat in rx.find_iter(message) {
+        if last_end != mat.start() {
+            // Add non-matching text with default formatting
+            job.append(
+                &message[last_end..mat.start()],
+                0.0,
+                TextFormat {
+                    ..Default::default()
+                },
+            );
+        }
+        // Add matching text with highlighted formatting
+        job.append(
+            &message[mat.start()..mat.end()],
+            0.0,
+            TextFormat {
+                color: Color32::BLACK,
+                background: Color32::from_hex("#E69F00").unwrap(),
+                ..Default::default()
+            },
+        );
+        last_end = mat.end();
+    }
+
+    if last_end < message.len() {
+        // Add remaining non-matching text
+        job.append(
+            &message[last_end..],
+            0.0,
+            TextFormat {
+                ..Default::default()
+            },
+        );
+    }
+
+    // Display the formatted text as a label
+    ui.label(job);
 }
 
 impl TemplateApp {
