@@ -102,9 +102,10 @@ impl LogEntry {
             .captures(line)
             .or_else(|| regex_detailed.captures(line))
             .and_then(|caps| {
-                let timestamp = dateparser::parse(&caps["timestamp"])
-                    .ok()
-                    .expect("Failed to parse timestamp");
+                let Ok(timestamp) = dateparser::parse(&caps["timestamp"]) else {
+                    log::error!("Failed to parse timestamp");
+                    return None;
+                };
                 let level = LogLevel::from_str(&caps["level"]);
                 let message = caps["message"].to_string();
                 Some(LogEntry {
