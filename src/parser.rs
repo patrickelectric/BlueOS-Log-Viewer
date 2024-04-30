@@ -10,6 +10,7 @@ use std::{
     io::{self, BufRead, BufReader, Read, Seek},
 };
 use zip::ZipArchive;
+use strum_macros::EnumIter;
 
 #[cfg(target_arch = "wasm32")]
 use tokio_with_wasm::tokio_wasm as tokio;
@@ -26,7 +27,7 @@ static INIT: Once = Once::new();
 pub type LogBook = BTreeMap<String, Vec<LogEntry>>;
 pub type Entries = Vec<LogEntry>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, EnumIter, PartialEq)]
 pub enum LogLevel {
     Error,
     Warn,
