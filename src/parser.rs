@@ -319,7 +319,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
 }
 
 pub fn process_log_file<R: Read>(reader: BufReader<R>) -> io::Result<(Vec<LogEntry>, usize)> {
-    let lines: Vec<String> = reader.lines().filter_map(|line| line.ok()).collect();
+    let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
     let mut size = 0;
     let mut entries = vec![];
     for line in lines {
