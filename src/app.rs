@@ -317,8 +317,7 @@ impl eframe::App for TemplateApp {
                                     while self
                                         .tree
                                         .iter_all_tabs()
-                                        .find(|(_data, tab)| *tab.title == tab_name)
-                                        .is_some()
+                                        .any(|(_data, tab)| *tab.title == tab_name)
                                     {
                                         tab_name += "+"
                                     }
