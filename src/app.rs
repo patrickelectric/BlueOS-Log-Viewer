@@ -85,19 +85,20 @@ impl egui_dock::TabViewer for TabViewer {
                 }
                 if *current_filter != *filter {
                     *filter = current_filter;
-                    *rx = regex::RegexBuilder::new(filter)
+                    if let Ok(rx) = regex::RegexBuilder::new(filter)
                         .case_insensitive(true)
                         .build()
-                        .unwrap();
-                    *filtered_entries = entries
-                        .iter()
-                        .filter(|entry| {
-                            rx.captures(&entry.message).is_some()
-                                || rx.captures(&entry.level.to_string()).is_some()
-                                || rx.captures(&entry.timestamp.to_string()).is_some()
-                        })
-                        .map(Clone::clone)
-                        .collect();
+                    {
+                        *filtered_entries = entries
+                            .iter()
+                            .filter(|entry| {
+                                rx.captures(&entry.message).is_some()
+                                    || rx.captures(&entry.level.to_string()).is_some()
+                                    || rx.captures(&entry.timestamp.to_string()).is_some()
+                            })
+                            .map(Clone::clone)
+                            .collect();
+                    }
                 }
             });
 
