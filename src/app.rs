@@ -2,7 +2,10 @@ use crate::parser::{self, LogEntry};
 use chrono::{DateTime, Utc};
 use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
-use std::{sync::{Arc, Mutex}, io::Read};
+use std::{
+    io::Read,
+    sync::{Arc, Mutex},
+};
 
 struct TabContent {
     title: String,

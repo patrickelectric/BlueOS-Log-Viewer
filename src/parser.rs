@@ -220,6 +220,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
             }
             let file_name = file.name().to_string();
             let service_name = get_service_name(&file_name);
+
             if file.size() > 0 {
                 let processed = if file.name().ends_with(".gz") {
                     process_log_file(std::io::BufReader::new(flate2::read::GzDecoder::new(
@@ -278,7 +279,6 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
                         // Allow frontend to render
                         #[cfg(target_arch = "wasm32")]
                         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-
                     }
                     continue;
                 } else {
@@ -293,6 +293,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
                     logs.insert(service_name.clone(), entries);
                 }
             }
+
             *cloned_worker.state.lock().unwrap() = ProcessingState::Processing(Info {
                 service_name,
                 percentage: 100.0 * i as f64 / size as f64,
