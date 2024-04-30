@@ -77,7 +77,7 @@ impl egui_dock::TabViewer for TabViewer {
 
         ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
             ui.horizontal(|ui| {
-                ui.label("Filter:");
+                ui.label("Search:");
                 let mut current_filter = filter.clone();
                 ui.add(egui::TextEdit::singleline(&mut current_filter).desired_width(120.0));
                 if ui.button("ｘ").clicked() {
