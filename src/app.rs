@@ -2,7 +2,7 @@ use crate::parser::{self, LogEntry};
 use chrono::{DateTime, Utc};
 use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, io::Read};
 
 struct TabContent {
     title: String,
@@ -238,12 +238,23 @@ impl eframe::App for TemplateApp {
 
                     if ui.button("Select a file").clicked() {
                         let cloned_worker = self.worker.clone();
-                        let future = async move {
-                            let file = rfd::AsyncFileDialog::new().pick_file().await;
-                            let data = file.unwrap().read().await;
-                            *cloned_worker.lock().unwrap() = parser::process_from_zip(data.clone());
-                        };
-                        async_std::task::block_on(future);
+
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            let future = async move {
+                                let file = rfd::AsyncFileDialog::new().pick_file().await;
+                                let data = file.unwrap().read().await;
+                                *cloned_worker.lock().unwrap() = parser::process_from_zip(data);
+                            };
+                            async_std::task::block_on(future);
+                        }
+
+                        #[cfg(not(target_arch = "wasm32"))]
+                        if let Some(path) = rfd::FileDialog::new().pick_file() {
+                            let data = std::fs::read(path).unwrap();
+                            *cloned_worker.lock().unwrap() = parser::process_from_zip(data);
+                        }
+
                         ui.close_menu();
                         self.logs = Default::default();
                         self.is_processing = true;

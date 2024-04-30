@@ -11,6 +11,12 @@ use std::{
 };
 use zip::ZipArchive;
 
+#[cfg(target_arch = "wasm32")]
+use tokio_with_wasm::tokio_wasm as tokio;
+
+#[cfg(not(target_arch = "wasm32"))]
+use tokio;
+
 use std::sync::Once;
 
 static mut REGEX_GENERAL: Option<Regex> = None;
@@ -199,14 +205,11 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
     let worker = Worker::default();
     let cloned_worker = worker.clone();
 
-    use tokio_with_wasm::tokio_wasm as tokio;
-
     tokio::spawn(async move {
         let started = chrono::prelude::Utc::now();
         let reader = std::io::Cursor::new(data);
         let mut archive = zip::ZipArchive::new(reader).unwrap();
         let mut logs: LogBook = BTreeMap::new();
-
         log::info!("Started processing {:#?}", chrono::prelude::Utc::now());
         let size = archive.len();
         let mut file_size = 0;
@@ -271,7 +274,11 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
                             size: file_size,
                             file: file.name().to_string(),
                         });
+
+                        // Allow frontend to render
+                        #[cfg(target_arch = "wasm32")]
                         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+
                     }
                     continue;
                 } else {
@@ -292,6 +299,9 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
                 size: file_size,
                 file: file.name().to_string(),
             });
+
+            // Allow frontend to render
+            #[cfg(target_arch = "wasm32")]
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
         log::info!("Done with processing {:#?}", chrono::prelude::Utc::now());
