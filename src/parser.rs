@@ -47,17 +47,18 @@ impl LogLevel {
             _ => LogLevel::Unknown,
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LogLevel::Error => "ERROR",
-            LogLevel::Warn => "WARN",
-            LogLevel::Info => "INFO",
-            LogLevel::Debug => "DEBUG",
-            LogLevel::Trace => "TRACE",
-            _ => "UNKNOWN",
+            LogLevel::Error => write!(f, "ERROR"),
+            LogLevel::Warn => write!(f, "WARN"),
+            LogLevel::Info => write!(f, "INFO"),
+            LogLevel::Debug => write!(f, "DEBUG"),
+            LogLevel::Trace => write!(f, "TRACE"),
+            _ => write!(f, "UNKNOWN"),
         }
-        .to_string()
     }
 }
 
