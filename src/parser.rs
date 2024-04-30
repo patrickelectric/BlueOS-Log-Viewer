@@ -180,18 +180,18 @@ impl Worker {
     fn process(&self, file: String) {
         let mut state = self.state.lock().unwrap();
         if let ProcessingState::None = *state {
-                *state = ProcessingState::Processing(Info {
-                service_name: file.split("/").next().unwrap().into(),
-                    percentage: 0.0,
-                    size: 0,
-                    file,
-                });
+            *state = ProcessingState::Processing(Info {
+                service_name: file.split('/').next().unwrap().into(),
+                percentage: 0.0,
+                size: 0,
+                file,
+            });
         }
     }
 }
 
 fn get_service_name(file: &str) -> String {
-    let names = file.split("/").collect::<Vec<&str>>();
+    let names = file.split('/').collect::<Vec<&str>>();
     let service_name = if names.len() > 1 {
         names[names.len() - 2].to_string()
     } else {
