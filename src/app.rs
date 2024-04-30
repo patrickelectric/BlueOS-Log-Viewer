@@ -234,10 +234,8 @@ impl eframe::App for TemplateApp {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     let is_web = cfg!(target_arch = "wasm32");
-                    if !is_web {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
+                    if !is_web && ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
 
                     if ui.button("Select a file").clicked() {
