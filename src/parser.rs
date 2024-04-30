@@ -179,16 +179,13 @@ impl Worker {
 impl Worker {
     fn process(&self, file: String) {
         let mut state = self.state.lock().unwrap();
-        match *state {
-            ProcessingState::None => {
+        if let ProcessingState::None = *state {
                 *state = ProcessingState::Processing(Info {
-                    service_name: file.split("/").next().unwrap().into(),
+                service_name: file.split("/").next().unwrap().into(),
                     percentage: 0.0,
                     size: 0,
                     file,
                 });
-            }
-            _ => {}
         }
     }
 }
