@@ -257,8 +257,10 @@ impl eframe::App for TemplateApp {
                     if self.is_processing {
                         if let Some(info) = self.worker.lock().unwrap().info() {
                             ui.label(format!(
-                                "Processing: {}   {:.2}%",
-                                info.file, info.percentage
+                                "Processing: {}   {:.2}% {}",
+                                info.file,
+                                info.percentage,
+                                &bytesize::ByteSize(info.size as u64).to_string(),
                             ));
                         }
                     } else {

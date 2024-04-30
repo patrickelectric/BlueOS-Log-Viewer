@@ -114,6 +114,7 @@ impl LogEntry {
 pub struct Info {
     pub service_name: String,
     pub percentage: f64,
+    pub size: usize,
     pub file: String,
 }
 
@@ -175,12 +176,23 @@ impl Worker {
                 *state = ProcessingState::Processing(Info {
                     service_name: file.split("/").next().unwrap().into(),
                     percentage: 0.0,
+                    size: 0,
                     file,
                 });
             }
             _ => {}
         }
     }
+}
+
+fn get_service_name(file: &str) -> String {
+    let names = file.split("/").collect::<Vec<&str>>();
+    let service_name = if names.len() > 1 {
+        names[names.len() - 2].to_string()
+    } else {
+        names[0].to_string()
+    };
+    service_name
 }
 
 pub fn process_from_zip(data: Vec<u8>) -> Worker {
@@ -200,17 +212,74 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
         let mut file_size = 0;
         for i in 0..size {
             let mut file = archive.by_index(i).unwrap();
-            let service_name: String = file.name().split("/").next().unwrap().into();
+            if !file.is_file() {
+                continue;
+            }
             let file_name = file.name().to_string();
-            log::info!("Processing: {}", file_name);
-            if file.is_file()
-                && (file.name().ends_with(".gz")
-                    || file.name().ends_with(".zip")
-                    || file.name().ends_with(".log"))
-            {
-                file_size += file.size() as usize;
-                let buf_reader = std::io::BufReader::new(flate2::read::GzDecoder::new(&mut file));
-                let mut entries = process_log_file(buf_reader).unwrap();
+            let service_name = get_service_name(&file_name);
+            if file.size() > 0 {
+                let processed = if file.name().ends_with(".gz") {
+                    process_log_file(std::io::BufReader::new(flate2::read::GzDecoder::new(
+                        &mut file,
+                    )))
+                } else if file.name().ends_with(".log") {
+                    process_log_file(std::io::BufReader::new(&mut file))
+                } else if file.name().ends_with(".zip") {
+                    let mut inner_data = Vec::new();
+                    file.read_to_end(&mut inner_data).unwrap();
+                    // log::info!("Content: {:?}", &inner_data[0..10]);
+                    let mut archive = match zip::ZipArchive::new(std::io::Cursor::new(inner_data)) {
+                        Ok(archive) => archive,
+                        Err(e) => {
+                            log::error!("Failed to open inner zip: {} {:#?}", &file_name, e);
+                            continue;
+                        }
+                    };
+                    let size_u = archive.len();
+                    for u in 0..size_u {
+                        let mut file = archive.by_index(u).unwrap();
+                        let file_name = file.name().to_string();
+                        let service_name = get_service_name(&file_name);
+                        // log::info!("Processing zip: {}", file_name);
+                        if !file.is_file() {
+                            continue;
+                        }
+                        if file.size() > 0 {
+                            let processed = if file.name().ends_with(".gz") {
+                                process_log_file(std::io::BufReader::new(
+                                    flate2::read::GzDecoder::new(&mut file),
+                                ))
+                            } else if file.name().ends_with(".log") {
+                                process_log_file(std::io::BufReader::new(&mut file))
+                            } else {
+                                continue;
+                            };
+                            let (mut entries, processed_size) = processed.unwrap();
+                            file_size += processed_size;
+                            if let Some(service) = logs.get_mut(&service_name) {
+                                service.append(&mut entries);
+                            } else {
+                                logs.insert(service_name.clone(), entries);
+                            }
+                        } else {
+                            continue;
+                        };
+
+                        *cloned_worker.state.lock().unwrap() = ProcessingState::Processing(Info {
+                            service_name,
+                            percentage: 100.0 * (i as f64 + u as f64 / size_u as f64) / size as f64,
+                            size: file_size,
+                            file: file.name().to_string(),
+                        });
+                        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+                    }
+                    continue;
+                } else {
+                    continue;
+                };
+
+                let (mut entries, processed_size) = processed.unwrap();
+                file_size += processed_size;
                 if let Some(service) = logs.get_mut(&service_name) {
                     service.append(&mut entries);
                 } else {
@@ -220,6 +289,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
             *cloned_worker.state.lock().unwrap() = ProcessingState::Processing(Info {
                 service_name,
                 percentage: 100.0 * i as f64 / size as f64,
+                size: file_size,
                 file: file.name().to_string(),
             });
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
@@ -242,11 +312,12 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
     worker
 }
 
-pub fn process_log_file<R: Read>(reader: BufReader<R>) -> io::Result<Vec<LogEntry>> {
+pub fn process_log_file<R: Read>(reader: BufReader<R>) -> io::Result<(Vec<LogEntry>, usize)> {
     let lines: Vec<String> = reader.lines().filter_map(|line| line.ok()).collect();
-
+    let mut size = 0;
     let mut entries = vec![];
     for line in lines {
+        size += line.len();
         if let Some(entry) = LogEntry::parse(&line) {
             entries.push(entry);
             continue;
@@ -259,5 +330,5 @@ pub fn process_log_file<R: Read>(reader: BufReader<R>) -> io::Result<Vec<LogEntr
         last_entry.message.push_str(&line);
     }
 
-    Ok(entries)
+    Ok((entries, size))
 }
