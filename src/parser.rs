@@ -207,7 +207,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
     tokio::spawn(async move {
         let started = chrono::prelude::Utc::now();
         let reader = std::io::Cursor::new(data);
-        let mut archive = zip::ZipArchive::new(reader).unwrap();
+        let mut archive = ZipArchive::new(reader).unwrap();
         let mut logs: LogBook = BTreeMap::new();
         log::info!("Started processing {:#?}", chrono::prelude::Utc::now());
         let size = archive.len();
@@ -222,16 +222,14 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
 
             if file.size() > 0 {
                 let processed = if file.name().ends_with(".gz") {
-                    process_log_file(std::io::BufReader::new(flate2::read::GzDecoder::new(
-                        &mut file,
-                    )))
+                    process_log_file(std::io::BufReader::new(GzDecoder::new(&mut file)))
                 } else if file.name().ends_with(".log") {
                     process_log_file(std::io::BufReader::new(&mut file))
                 } else if file.name().ends_with(".zip") {
                     let mut inner_data = Vec::new();
                     file.read_to_end(&mut inner_data).unwrap();
                     // log::info!("Content: {:?}", &inner_data[0..10]);
-                    let mut archive = match zip::ZipArchive::new(std::io::Cursor::new(inner_data)) {
+                    let mut archive = match ZipArchive::new(std::io::Cursor::new(inner_data)) {
                         Ok(archive) => archive,
                         Err(e) => {
                             log::error!("Failed to open inner zip: {} {:#?}", &file_name, e);
@@ -249,9 +247,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
                         }
                         if file.size() > 0 {
                             let processed = if file.name().ends_with(".gz") {
-                                process_log_file(std::io::BufReader::new(
-                                    flate2::read::GzDecoder::new(&mut file),
-                                ))
+                                process_log_file(std::io::BufReader::new(GzDecoder::new(&mut file)))
                             } else if file.name().ends_with(".log") {
                                 process_log_file(std::io::BufReader::new(&mut file))
                             } else {
