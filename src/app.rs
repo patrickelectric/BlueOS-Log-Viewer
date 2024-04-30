@@ -1,7 +1,8 @@
-use crate::parser::{self, LogEntry};
+use crate::parser::{self, LogEntry, LogLevel};
 use chrono::{DateTime, Utc};
 use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
+use strum::IntoEnumIterator;
 use std::{
     io::Read,
     sync::{Arc, Mutex},
@@ -11,6 +12,7 @@ struct TabContent {
     title: String,
     entries: parser::Entries,
     filter: String,
+    enabled_levels: Vec<LogLevel>,
     //TODO: Move this to reference
     filtered_entries: Vec<LogEntry>,
     rx: regex::Regex,
@@ -22,6 +24,7 @@ impl TabContent {
             title,
             entries,
             filter: Default::default(),
+            enabled_levels: LogLevel::iter().filter(|x| *x != LogLevel::Unknown).collect(),
             filtered_entries: Default::default(),
             rx: regex::Regex::new("").unwrap(),
         }
@@ -79,10 +82,37 @@ impl egui_dock::TabViewer for TabViewer {
             ui.horizontal(|ui| {
                 ui.label("Search:");
                 let mut current_filter = filter.clone();
+                let mut current_levels = tab.enabled_levels.clone();
                 ui.add(egui::TextEdit::singleline(&mut current_filter).desired_width(120.0));
                 if ui.button("ｘ").clicked() {
                     current_filter.clear();
                 }
+
+                ui.add_space(16.0);
+                ui.label("Levels:");
+                for log_enum in LogLevel::iter() {
+                    if log_enum == LogLevel::Unknown {
+                        continue;
+                    }
+                    let mut enabled = current_levels.contains(&log_enum);
+                    if ui.add(egui::Checkbox::new(&mut enabled, log_enum.to_string())).changed() {
+                        if enabled {
+                            current_levels.push(log_enum);
+                        } else {
+                            current_levels.retain(|x| *x != log_enum);
+                        }
+                    }
+                }
+
+                if current_levels != tab.enabled_levels {
+                    tab.enabled_levels = current_levels;
+                    *filtered_entries = entries
+                        .iter()
+                        .filter(|entry| tab.enabled_levels.contains(&entry.level))
+                        .map(Clone::clone)
+                        .collect();
+                }
+
                 if *current_filter != *filter {
                     *filter = current_filter;
                     if let Ok(rx) = regex::RegexBuilder::new(filter)
