@@ -302,7 +302,7 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
         }
         log::info!("Done with processing {:#?}", chrono::prelude::Utc::now());
 
-        let keys: Vec<String> = logs.keys().into_iter().map(|value| value.clone()).collect();
+        let keys: Vec<String> = logs.keys().cloned().collect();
         for key in keys {
             logs.get_mut(&key)
                 .unwrap()
