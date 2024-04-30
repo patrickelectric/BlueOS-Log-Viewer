@@ -233,11 +233,6 @@ impl eframe::App for TemplateApp {
 
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
-                    let is_web = cfg!(target_arch = "wasm32");
-                    if !is_web && ui.button("Quit").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-
                     if ui.button("Select a file").clicked() {
                         let cloned_worker = self.worker.clone();
 
@@ -260,6 +255,11 @@ impl eframe::App for TemplateApp {
                         ui.close_menu();
                         self.logs = Default::default();
                         self.is_processing = true;
+                    }
+
+                    let is_web = cfg!(target_arch = "wasm32");
+                    if !is_web && ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
                 ui.add_space(16.0);
