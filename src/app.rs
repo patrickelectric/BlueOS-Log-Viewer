@@ -1,12 +1,12 @@
 use crate::parser::{self, LogEntry, LogLevel};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
-use strum::IntoEnumIterator;
 use std::{
     io::Read,
     sync::{Arc, Mutex},
 };
+use strum::IntoEnumIterator;
 
 struct TabContent {
     title: String,
@@ -24,7 +24,9 @@ impl TabContent {
             title,
             entries,
             filter: Default::default(),
-            enabled_levels: LogLevel::iter().filter(|x| *x != LogLevel::Unknown).collect(),
+            enabled_levels: LogLevel::iter()
+                .filter(|x| *x != LogLevel::Unknown)
+                .collect(),
             filtered_entries: Default::default(),
             rx: regex::Regex::new("").unwrap(),
         }
@@ -50,6 +52,11 @@ impl Default for TemplateApp {
             tree: DockState::new(vec![]),
             tab_viewer: TabViewer {
                 selected_date: None,
+                first_date: chrono::offset::Utc::now()
+                    .with_year(2020)
+                    .unwrap()
+                    .date_naive(),
+                second_date: (chrono::offset::Utc::now() + chrono::Months::new(1)).date_naive(),
             },
             is_processing: false,
             last_time: chrono::prelude::Utc::now(),
@@ -59,6 +66,8 @@ impl Default for TemplateApp {
 
 struct TabViewer {
     selected_date: Option<DateTime<Utc>>,
+    first_date: chrono::NaiveDate,
+    second_date: chrono::NaiveDate,
 }
 
 impl egui_dock::TabViewer for TabViewer {
@@ -88,14 +97,17 @@ impl egui_dock::TabViewer for TabViewer {
                     current_filter.clear();
                 }
 
-                ui.add_space(16.0);
+                ui.separator();
                 ui.label("Levels:");
                 for log_enum in LogLevel::iter() {
                     if log_enum == LogLevel::Unknown {
                         continue;
                     }
                     let mut enabled = current_levels.contains(&log_enum);
-                    if ui.add(egui::Checkbox::new(&mut enabled, log_enum.to_string())).changed() {
+                    if ui
+                        .add(egui::Checkbox::new(&mut enabled, log_enum.to_string()))
+                        .changed()
+                    {
                         if enabled {
                             current_levels.push(log_enum);
                         } else {
@@ -104,16 +116,21 @@ impl egui_dock::TabViewer for TabViewer {
                     }
                 }
 
-                if current_levels != tab.enabled_levels {
-                    tab.enabled_levels = current_levels;
-                    *filtered_entries = entries
-                        .iter()
-                        .filter(|entry| tab.enabled_levels.contains(&entry.level))
-                        .map(Clone::clone)
-                        .collect();
-                }
+                ui.separator();
+                ui.label("Date range:");
+                let first_date = self.first_date.clone();
+                let second_date = self.second_date.clone();
+                ui.add(egui_extras::DatePickerButton::new(&mut self.first_date).id_source("First"));
+                ui.add(
+                    egui_extras::DatePickerButton::new(&mut self.second_date).id_source("Second"),
+                );
 
-                if *current_filter != *filter {
+                if *current_filter != *filter
+                    || current_levels != tab.enabled_levels
+                    || first_date != self.first_date
+                    || second_date != self.second_date
+                {
+                    tab.enabled_levels = current_levels;
                     *filter = current_filter;
                     if let Ok(rx) = regex::RegexBuilder::new(filter)
                         .case_insensitive(true)
@@ -121,6 +138,11 @@ impl egui_dock::TabViewer for TabViewer {
                     {
                         *filtered_entries = entries
                             .iter()
+                            .filter(|entry| {
+                                entry.timestamp.date_naive() > self.first_date
+                                    && entry.timestamp.date_naive() < self.second_date
+                            })
+                            .filter(|entry| tab.enabled_levels.contains(&entry.level))
                             .filter(|entry| {
                                 rx.captures(&entry.message).is_some()
                                     || rx.captures(&entry.level.to_string()).is_some()
