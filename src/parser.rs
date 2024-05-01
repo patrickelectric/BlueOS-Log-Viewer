@@ -325,6 +325,7 @@ pub fn process_log_file<R: Read>(reader: BufReader<R>) -> io::Result<(Vec<LogEnt
     let mut entries = vec![];
     for line in lines {
         size += line.len();
+        let line = line.trim_end_matches(['\0']);
         if let Some(entry) = LogEntry::parse(&line) {
             entries.push(entry);
             continue;
@@ -334,7 +335,7 @@ pub fn process_log_file<R: Read>(reader: BufReader<R>) -> io::Result<(Vec<LogEnt
             continue;
         };
 
-        last_entry.message.push_str(&line);
+        last_entry.message.push_str(&format!("\n{}", &line));
     }
 
     Ok((entries, size))

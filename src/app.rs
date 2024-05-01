@@ -15,6 +15,7 @@ struct TabContent {
     enabled_levels: Vec<LogLevel>,
     //TODO: Move this to reference
     filtered_entries: Vec<LogEntry>,
+    heights: Vec<f32>,
     rx: regex::Regex,
 }
 
@@ -28,6 +29,7 @@ impl TabContent {
                 .filter(|x| *x != LogLevel::Unknown)
                 .collect(),
             filtered_entries: Default::default(),
+            heights: vec![],
             rx: regex::Regex::new("").unwrap(),
         }
     }
@@ -83,8 +85,19 @@ impl egui_dock::TabViewer for TabViewer {
         let filtered_entries = &mut tab.filtered_entries;
         let rx = &mut tab.rx;
 
+        let text_height = egui::TextStyle::Body
+            .resolve(ui.style())
+            .size
+            .max(ui.spacing().interact_size.y);
+
         if filter.is_empty() && filtered_entries.is_empty() {
             *filtered_entries = entries.clone();
+            tab.heights = filtered_entries
+                .iter()
+                .map(|entry| {
+                    (entry.message.lines().count() as f32 * text_height * 0.78).max(text_height)
+                })
+                .collect();
         }
 
         ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
@@ -150,16 +163,18 @@ impl egui_dock::TabViewer for TabViewer {
                             })
                             .map(Clone::clone)
                             .collect();
+                        tab.heights = filtered_entries
+                            .iter()
+                            .map(|entry| {
+                                (entry.message.lines().count() as f32 * text_height * 0.78)
+                                    .max(text_height)
+                            })
+                            .collect();
                     }
                 }
             });
 
             use egui_extras::{Column, TableBuilder};
-
-            let text_height = egui::TextStyle::Body
-                .resolve(ui.style())
-                .size
-                .max(ui.spacing().interact_size.y);
 
             let available_height = ui.available_height();
             let mut table = TableBuilder::new(ui)
@@ -167,7 +182,7 @@ impl egui_dock::TabViewer for TabViewer {
                 .auto_shrink(false)
                 .resizable(true)
                 .stick_to_bottom(true)
-                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .cell_layout(egui::Layout::left_to_right(egui::Align::TOP))
                 .column(Column::auto())
                 .column(Column::auto())
                 .column(Column::auto())
@@ -189,8 +204,7 @@ impl egui_dock::TabViewer for TabViewer {
                     });
                 })
                 .body(|body| {
-                    let size = filtered_entries.len();
-                    body.rows(text_height, size, move |mut row| {
+                    body.heterogeneous_rows(tab.heights.iter().map(|x| *x), move |mut row| {
                         let row_index = row.index();
                         let entry = &filtered_entries[row_index];
                         row.col(|ui| {
