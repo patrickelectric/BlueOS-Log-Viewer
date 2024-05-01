@@ -1,4 +1,5 @@
 use crate::parser::{self, LogEntry, LogLevel};
+use async_std::task::current;
 use chrono::{DateTime, Datelike, Utc};
 use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
@@ -190,7 +191,6 @@ impl egui_dock::TabViewer for TabViewer {
                 .max_scroll_height(available_height);
 
             table = table.sense(egui::Sense::click());
-
             table
                 .header(20.0, |mut header| {
                     header.col(|ui| {
@@ -221,11 +221,18 @@ impl egui_dock::TabViewer for TabViewer {
                             };
                             ui.label(RichText::new(entry.level.to_string()).color(color));
                         });
+
                         row.col(|ui| {
+                            let mut job = LayoutJob::default();
                             if filter.is_empty() {
-                                ui.label(entry.message.to_string());
+                                create_layout_from_terminal_escape_sequence(
+                                    &entry.message,
+                                    &mut job,
+                                );
+                                ui.label(job);
                             } else {
-                                highlight_text_in_ui(ui, entry.message.as_str(), rx);
+                                highlight_text_in_ui(ui, entry.message.as_str(), rx, &mut job);
+                                ui.label(job);
                             }
                         });
 
@@ -239,10 +246,8 @@ impl egui_dock::TabViewer for TabViewer {
     }
 }
 
-fn highlight_text_in_ui(ui: &mut egui::Ui, message: &str, rx: &regex::Regex) {
+fn highlight_text_in_ui(ui: &mut egui::Ui, message: &str, rx: &regex::Regex, job: &mut LayoutJob) {
     let mut last_end = 0;
-
-    let mut job = LayoutJob::default();
 
     // Iterate over all matches in the message
     for mat in rx.find_iter(message) {
@@ -279,9 +284,50 @@ fn highlight_text_in_ui(ui: &mut egui::Ui, message: &str, rx: &regex::Regex) {
             },
         );
     }
+}
 
-    // Display the formatted text as a label
-    ui.label(job);
+fn create_layout_from_terminal_escape_sequence(input: &str, job: &mut LayoutJob) {
+    let mut current_format = TextFormat::default();
+
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' && chars.peek() == Some(&'[') {
+            // Consume '['
+            chars.next();
+
+            // Collect the entire escape code
+            let mut escape_code = String::new();
+            while let Some(&num) = chars.peek() {
+                if num.is_ascii_digit() || num == ';' {
+                    escape_code.push(chars.next().unwrap());
+                } else {
+                    break;
+                }
+            }
+
+            // Consume the final character ('m' in this case)
+            let _ = chars.next();
+
+            for code in escape_code.split(';') {
+                match code {
+                    "0" => current_format = TextFormat::default(), // Reset
+                    "1" => current_format.underline = egui::Stroke::new(2.0, current_format.color), // Bold on (no bold in egui, use underline)
+                    "3" => current_format.italics = true, // Italic on
+                    "30" => current_format.color = Color32::BLACK,
+                    "31" => current_format.color = Color32::RED,
+                    "32" => current_format.color = Color32::GREEN,
+                    "33" => current_format.color = Color32::YELLOW,
+                    "34" => current_format.color = Color32::BLUE,
+                    "35" => current_format.color = Color32::from_hex("#FF00FF").unwrap(),
+                    "36" => current_format.color = Color32::from_hex("#00FFFF").unwrap(),
+                    "37" => current_format.color = Color32::WHITE,
+                    _ => (),
+                }
+            }
+        } else {
+            job.append(&c.to_string(), 0.0, current_format.clone());
+        }
+    }
 }
 
 impl TemplateApp {
