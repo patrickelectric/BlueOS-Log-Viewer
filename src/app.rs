@@ -204,7 +204,7 @@ impl egui_dock::TabViewer for TabViewer {
                     });
                 })
                 .body(|body| {
-                    body.heterogeneous_rows(tab.heights.iter().map(|x| *x), move |mut row| {
+                    body.heterogeneous_rows(tab.heights.iter().copied(), move |mut row| {
                         let row_index = row.index();
                         let entry = &filtered_entries[row_index];
                         row.col(|ui| {
