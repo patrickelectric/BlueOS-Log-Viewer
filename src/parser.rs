@@ -9,8 +9,8 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader, Read, Seek},
 };
-use zip::ZipArchive;
 use strum_macros::EnumIter;
+use zip::ZipArchive;
 
 #[cfg(target_arch = "wasm32")]
 use tokio_with_wasm::tokio_wasm as tokio;
