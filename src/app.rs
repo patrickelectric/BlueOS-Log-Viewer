@@ -209,7 +209,9 @@ impl egui_dock::TabViewer for TabViewer {
                         let row_index = row.index();
                         let entry = &filtered_entries[row_index];
                         row.col(|ui| {
-                            ui.label(entry.timestamp.to_string());
+                            let mut job = LayoutJob::default();
+                            highlight_text_in_ui(ui, &entry.timestamp.to_string(), rx, &mut job);
+                            ui.label(job);
                         });
                         row.col(|ui| {
                             let color = match entry.level {
