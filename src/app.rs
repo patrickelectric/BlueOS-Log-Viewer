@@ -96,7 +96,7 @@ impl egui_dock::TabViewer for TabViewer {
             tab.heights = filtered_entries
                 .iter()
                 .map(|entry| {
-                    (entry.message.lines().count() as f32 * text_height * 0.78).max(text_height)
+                    (entry.message.lines().count() as f32 * text_height * 0.9).max(text_height)
                 })
                 .collect();
         }
