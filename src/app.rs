@@ -146,10 +146,11 @@ impl egui_dock::TabViewer for TabViewer {
                 {
                     tab.enabled_levels = current_levels;
                     *filter = current_filter;
-                    if let Ok(rx) = regex::RegexBuilder::new(filter)
+                    if let Ok(user_regex) = regex::RegexBuilder::new(filter)
                         .case_insensitive(true)
                         .build()
                     {
+                        *rx = user_regex;
                         *filtered_entries = entries
                             .iter()
                             .filter(|entry| {
