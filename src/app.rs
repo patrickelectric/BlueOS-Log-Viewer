@@ -232,11 +232,10 @@ impl egui_dock::TabViewer for TabViewer {
                                     &entry.message,
                                     &mut job,
                                 );
-                                ui.label(job);
                             } else {
                                 highlight_text_in_ui(ui, entry.message.as_str(), rx, &mut job);
-                                ui.label(job);
                             }
+                            ui.label(job);
                         });
 
                         if row.response().clicked() {
