@@ -85,20 +85,31 @@ impl egui_dock::TabViewer for TabViewer {
         let filter = &mut tab.filter;
         let filtered_entries = &mut tab.filtered_entries;
         let rx = &mut tab.rx;
+        let heights = &mut tab.heights;
 
         let text_height = egui::TextStyle::Body
             .resolve(ui.style())
             .size
             .max(ui.spacing().interact_size.y);
 
-        if filter.is_empty() && filtered_entries.is_empty() {
+        #[inline]
+        fn reset_filter(
+            entries: &parser::Entries,
+            filtered_entries: &mut Vec<LogEntry>,
+            heights: &mut Vec<f32>,
+            text_height: f32,
+        ) {
             *filtered_entries = entries.clone();
-            tab.heights = filtered_entries
+            *heights = filtered_entries
                 .iter()
                 .map(|entry| {
                     (entry.message.lines().count() as f32 * text_height * 0.9).max(text_height)
                 })
                 .collect();
+        }
+        if filter.is_empty() && filtered_entries.is_empty() {
+            reset_filter(entries, filtered_entries, heights, text_height);
+            filter.clear();
         }
 
         ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
@@ -108,7 +119,8 @@ impl egui_dock::TabViewer for TabViewer {
                 let mut current_levels = tab.enabled_levels.clone();
                 ui.add(egui::TextEdit::singleline(&mut current_filter).desired_width(120.0));
                 if ui.button("ｘ").clicked() {
-                    current_filter.clear();
+                    reset_filter(entries, filtered_entries, &mut tab.heights, text_height);
+                    filter.clear();
                 }
 
                 ui.separator();
@@ -168,7 +180,7 @@ impl egui_dock::TabViewer for TabViewer {
                         tab.heights = filtered_entries
                             .iter()
                             .map(|entry| {
-                                (entry.message.lines().count() as f32 * text_height * 0.78)
+                                (entry.message.lines().count() as f32 * text_height * 0.9)
                                     .max(text_height)
                             })
                             .collect();
@@ -209,9 +221,13 @@ impl egui_dock::TabViewer for TabViewer {
                         let row_index = row.index();
                         let entry = &filtered_entries[row_index];
                         row.col(|ui| {
-                            let mut job = LayoutJob::default();
-                            highlight_text_in_ui(ui, &entry.timestamp.to_string(), rx, &mut job);
-                            ui.label(job);
+                            if filter.is_empty() {
+                                ui.label(&entry.timestamp.to_string());
+                            } else {
+                                let mut job = LayoutJob::default();
+                                highlight_text_in_ui(&entry.timestamp.to_string(), rx, &mut job);
+                                ui.label(job);
+                            }
                         });
                         row.col(|ui| {
                             let color = match entry.level {
@@ -233,7 +249,7 @@ impl egui_dock::TabViewer for TabViewer {
                                     &mut job,
                                 );
                             } else {
-                                highlight_text_in_ui(ui, entry.message.as_str(), rx, &mut job);
+                                highlight_text_in_ui(entry.message.as_str(), rx, &mut job);
                             }
                             ui.label(job);
                         });
@@ -248,7 +264,7 @@ impl egui_dock::TabViewer for TabViewer {
     }
 }
 
-fn highlight_text_in_ui(ui: &mut egui::Ui, message: &str, rx: &regex::Regex, job: &mut LayoutJob) {
+fn highlight_text_in_ui(message: &str, rx: &regex::Regex, job: &mut LayoutJob) {
     let mut last_end = 0;
 
     // Iterate over all matches in the message
