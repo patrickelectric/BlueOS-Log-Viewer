@@ -12,6 +12,7 @@ use strum::IntoEnumIterator;
 struct TabContent {
     title: String,
     entries: parser::Entries,
+    is_search: bool,
     filter: String,
     enabled_levels: Vec<LogLevel>,
     //TODO: Move this to reference
@@ -25,6 +26,7 @@ impl TabContent {
         Self {
             title,
             entries,
+            is_search: true,
             filter: Default::default(),
             enabled_levels: LogLevel::iter()
                 .filter(|x| *x != LogLevel::Unknown)
@@ -82,6 +84,7 @@ impl egui_dock::TabViewer for TabViewer {
 
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
         let entries = &tab.entries;
+        let is_search = &mut tab.is_search;
         let filter = &mut tab.filter;
         let filtered_entries = &mut tab.filtered_entries;
         let rx = &mut tab.rx;
@@ -112,15 +115,23 @@ impl egui_dock::TabViewer for TabViewer {
             filter.clear();
         }
 
+        let mut current_is_search = is_search.clone();
+        let mut current_row = None;
         ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
             ui.horizontal(|ui| {
-                ui.label("Search:");
+                if ui
+                    .button(if *is_search { "Search:" } else { "Filter:" })
+                    .clicked()
+                {
+                    current_is_search = !*is_search;
+                }
                 let mut current_filter = filter.clone();
                 let mut current_levels = tab.enabled_levels.clone();
                 ui.add(egui::TextEdit::singleline(&mut current_filter).desired_width(120.0));
                 if ui.button("ｘ").clicked() {
-                    reset_filter(entries, filtered_entries, &mut tab.heights, text_height);
+                    current_filter.clear();
                     filter.clear();
+                    reset_filter(entries, filtered_entries, &mut tab.heights, text_height);
                 }
 
                 ui.separator();
@@ -152,12 +163,14 @@ impl egui_dock::TabViewer for TabViewer {
                 );
 
                 if *current_filter != *filter
+                    || current_is_search != *is_search
                     || current_levels != tab.enabled_levels
                     || first_date != self.first_date
                     || second_date != self.second_date
                 {
-                    tab.enabled_levels = current_levels;
+                    *is_search = current_is_search;
                     *filter = current_filter;
+                    tab.enabled_levels = current_levels;
                     if let Ok(user_regex) = regex::RegexBuilder::new(filter)
                         .case_insensitive(true)
                         .build()
@@ -171,9 +184,13 @@ impl egui_dock::TabViewer for TabViewer {
                             })
                             .filter(|entry| tab.enabled_levels.contains(&entry.level))
                             .filter(|entry| {
-                                rx.captures(&entry.message).is_some()
-                                    || rx.captures(&entry.level.to_string()).is_some()
-                                    || rx.captures(&entry.timestamp.to_string()).is_some()
+                                if *is_search {
+                                    true
+                                } else {
+                                    rx.captures(&entry.message).is_some()
+                                        || rx.captures(&entry.level.to_string()).is_some()
+                                        || rx.captures(&entry.timestamp.to_string()).is_some()
+                                }
                             })
                             .map(Clone::clone)
                             .collect();
@@ -185,6 +202,12 @@ impl egui_dock::TabViewer for TabViewer {
                             })
                             .collect();
                     }
+
+                    current_row = filtered_entries.iter().rposition(|entry| {
+                        rx.captures(&entry.message).is_some()
+                            || rx.captures(&entry.level.to_string()).is_some()
+                            || rx.captures(&entry.timestamp.to_string()).is_some()
+                    });
                 }
             });
 
@@ -195,7 +218,6 @@ impl egui_dock::TabViewer for TabViewer {
                 .striped(true)
                 .auto_shrink(false)
                 .resizable(true)
-                .stick_to_bottom(true)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::TOP))
                 .column(Column::auto())
                 .column(Column::auto())
@@ -204,6 +226,9 @@ impl egui_dock::TabViewer for TabViewer {
                 .max_scroll_height(available_height);
 
             table = table.sense(egui::Sense::click());
+            if let Some(index) = current_row {
+                table = table.scroll_to_row(index, Some(egui::Align::LEFT));
+            }
             table
                 .header(20.0, |mut header| {
                     header.col(|ui| {
