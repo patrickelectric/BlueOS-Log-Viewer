@@ -201,7 +201,7 @@ fn get_service_name(file: &str) -> String {
     service_name
 }
 
-pub fn process_from_zip(data: Vec<u8>) -> Worker {
+pub fn process_from_zip(data: Vec<u8>, allowed_versions: Vec<String>) -> Worker {
     let worker = Worker::default();
     let cloned_worker = worker.clone();
 
@@ -220,6 +220,9 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
             }
             let file_name = file.name().to_string();
             let service_name = get_service_name(&file_name);
+            if !allowed_versions.contains(&service_name) {
+                continue;
+            }
 
             if file.size() > 0 {
                 let processed = if file.name().ends_with(".gz") {
@@ -242,6 +245,9 @@ pub fn process_from_zip(data: Vec<u8>) -> Worker {
                         let mut file = archive.by_index(u).unwrap();
                         let file_name = file.name().to_string();
                         let service_name = get_service_name(&file_name);
+                        if !allowed_versions.contains(&service_name) {
+                            continue;
+                        }
                         // log::info!("Processing zip: {}", file_name);
                         if !file.is_file() {
                             continue;

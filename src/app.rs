@@ -3,6 +3,8 @@ use async_std::task::current;
 use chrono::{DateTime, Datelike, Utc};
 use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
 use egui_dock::{DockArea, DockState, Style};
+use egui_modal::Modal;
+use std::collections::BTreeMap;
 use std::{
     io::Read,
     sync::{Arc, Mutex},
@@ -41,11 +43,13 @@ impl TabContent {
 pub struct TemplateApp {
     worker: Arc<Mutex<parser::Worker>>,
     size_text: Arc<Mutex<String>>,
+    open_model: bool,
     logs: parser::Processed,
     tree: DockState<TabContent>,
     tab_viewer: TabViewer,
     is_processing: bool,
     last_time: chrono::DateTime<chrono::Utc>,
+    service_names: BTreeMap<String, bool>,
 }
 
 impl Default for TemplateApp {
@@ -53,6 +57,7 @@ impl Default for TemplateApp {
         Self {
             worker: Arc::new(Mutex::new(Default::default())),
             size_text: Default::default(),
+            open_model: false,
             logs: Default::default(),
             tree: DockState::new(vec![]),
             tab_viewer: TabViewer {
@@ -65,6 +70,27 @@ impl Default for TemplateApp {
             },
             is_processing: false,
             last_time: chrono::prelude::Utc::now(),
+            service_names: vec![
+                "ardupilot-manager",
+                "bag-of-holding",
+                "beacon",
+                "bootstrap",
+                "bridget",
+                "cable-guy",
+                "commander",
+                "helper",
+                "kraken",
+                "log-zipper",
+                "mavlink-camera-manager",
+                "nmea-injector",
+                "pardal",
+                "ping",
+                "version-chooser",
+                "wifi-manage",
+            ]
+            .iter()
+            .map(|&name| (name.into(), true))
+            .collect(),
         }
     }
 }
@@ -381,6 +407,65 @@ impl TemplateApp {
 
 impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let modal = Modal::new(ctx, "my_modal");
+        let cloned_worker = self.worker.clone();
+
+        // What goes inside the modal
+        modal.show(|ui| {
+            // these helper functions help set the ui based on the modal's
+            // set style, but they are not required and you can put whatever
+            // ui you want inside [`.show()`]
+            modal.title(ui, "Open BlueOS Log file");
+            modal.frame(ui, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
+                        for (service_name, checked) in &mut self.service_names {
+                            ui.checkbox(checked, service_name);
+                            ui.end_row();
+                        }
+                    });
+                });
+            });
+            modal.buttons(ui, |ui| {
+                // After clicking, the modal is automatically closed
+                if modal.button(ui, "close").clicked() {
+                    self.open_model = false;
+                };
+
+                if modal.button(ui, "Load file").clicked() {
+                    let allowed_services: Vec<String> = self
+                        .service_names
+                        .iter()
+                        .filter(|(_, &value)| value)
+                        .map(|(name, _)| name)
+                        .cloned()
+                        .collect();
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        let future = async move {
+                            let file = rfd::AsyncFileDialog::new().pick_file().await;
+                            let data = file.unwrap().read().await;
+                            *cloned_worker.lock().unwrap() =
+                                parser::process_from_zip(data, allowed_services);
+                        };
+                        async_std::task::block_on(future);
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Some(path) = rfd::FileDialog::new().pick_file() {
+                        let data = std::fs::read(path).unwrap();
+                        *cloned_worker.lock().unwrap() =
+                            parser::process_from_zip(data, allowed_services);
+                    }
+
+                    self.open_model = false;
+                }
+            });
+        });
+
+        if self.open_model {
+            modal.open();
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             let now = chrono::prelude::Utc::now();
             let _delta = now - self.last_time;
@@ -389,23 +474,7 @@ impl eframe::App for TemplateApp {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Select a file").clicked() {
-                        let cloned_worker = self.worker.clone();
-
-                        #[cfg(target_arch = "wasm32")]
-                        {
-                            let future = async move {
-                                let file = rfd::AsyncFileDialog::new().pick_file().await;
-                                let data = file.unwrap().read().await;
-                                *cloned_worker.lock().unwrap() = parser::process_from_zip(data);
-                            };
-                            async_std::task::block_on(future);
-                        }
-
-                        #[cfg(not(target_arch = "wasm32"))]
-                        if let Some(path) = rfd::FileDialog::new().pick_file() {
-                            let data = std::fs::read(path).unwrap();
-                            *cloned_worker.lock().unwrap() = parser::process_from_zip(data);
-                        }
+                        self.open_model = true;
 
                         ui.close_menu();
                         self.logs = Default::default();
