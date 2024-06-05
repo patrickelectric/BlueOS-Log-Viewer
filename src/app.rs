@@ -89,7 +89,10 @@ impl Default for TemplateApp {
                 "wifi-manage",
             ]
             .iter()
-            .map(|&name| (name.into(), true))
+            .map(|&name| {
+                let value = !name.contains("camera");
+                (name.into(), value)
+            })
             .collect(),
         }
     }
