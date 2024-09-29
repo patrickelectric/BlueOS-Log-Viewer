@@ -11,9 +11,9 @@
 
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
     
-<script type="module" nonce="vEwfnYBMQ2JfGDjeNfb7Lg==">
-import init, * as bindings from 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-f0a7eb741d700b5d.js';
-const wasm = await init('https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-f0a7eb741d700b5d_bg.wasm');
+<script type="module" nonce="ARpMTDDxYPXymrstDskEmQ==">
+import init, * as bindings from 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a.js';
+const wasm = await init('https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a_bg.wasm');
 
 
 window.wasmBindings = bindings;
@@ -77,6 +77,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             margin-left: auto;
             display: block;
             position: absolute;
+            width: 100%;
+            height: 100%;
             top: 0%;
             left: 50%;
             transform: translate(-50%, 0%);
@@ -127,8 +129,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         }
     </style>
 
-<link rel="modulepreload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-f0a7eb741d700b5d.js" crossorigin=anonymous integrity="sha384-bLaunTTetWC2PPWQ4E9pu7vA7ZgsbhuSvu2DmgvyLO7aFQDO6rtigMrOtP265Fe7">
-<link rel="preload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-f0a7eb741d700b5d_bg.wasm" crossorigin=anonymous integrity="sha384-eGuYEFKb1lRRB/62fTXN8hOM9nBnI0WNt561bsHxwbzhjZpuuLflAM3BgqyCr7sN" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a.js" crossorigin=anonymous integrity="sha384-vjYApwdugPowBjAF4+cBTPC/I556v6+5GEMsHMHf0463pPcsS/+5RhOUpPQtuqSy">
+<link rel="preload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a_bg.wasm" crossorigin=anonymous integrity="sha384-qAT6c/zXaYt0kcf6yRHxC/MZxblUsJ37DLOy15hZNCWYlTSHVl+WYX5yJ/EGf/lN" as="fetch" type="application/wasm"></head>
 
 <body>
     <!-- The WASM code will resize the canvas dynamically -->
