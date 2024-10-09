@@ -24,28 +24,53 @@ async fn main() -> eframe::Result<()> {
     eframe::run_native(
         "BlueOS Log Viewer",
         native_options,
-        Box::new(|cc| Box::new(blueos_log_viewer::TemplateApp::new(cc))),
+        Box::new(|cc| Ok(Box::new(blueos_log_viewer::TemplateApp::new(cc)))),
     )
 }
 
 // When compiling to web using trunk:
 #[cfg(target_arch = "wasm32")]
 fn main() {
+    use eframe::wasm_bindgen::JsCast as _;
+
     // Redirect `log` message to `console.log` and friends:
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
-
-    wasm_logger::init(wasm_logger::Config::default());
 
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {
-        eframe::WebRunner::new()
+        let document = web_sys::window()
+            .expect("No window")
+            .document()
+            .expect("No document");
+
+        let canvas = document
+            .get_element_by_id("the_canvas_id")
+            .expect("Failed to find the_canvas_id")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("the_canvas_id was not a HtmlCanvasElement");
+
+        let start_result = eframe::WebRunner::new()
             .start(
-                "the_canvas_id", // hardcode it
+                canvas,
                 web_options,
-                Box::new(|cc| Box::new(blueos_log_viewer::TemplateApp::new(cc))),
+                Box::new(|cc| Ok(Box::new(blueos_log_viewer::TemplateApp::new(cc)))),
             )
-            .await
-            .expect("failed to start eframe");
+            .await;
+
+        // Remove the loading text and spinner:
+        if let Some(loading_text) = document.get_element_by_id("loading_text") {
+            match start_result {
+                Ok(_) => {
+                    loading_text.remove();
+                }
+                Err(e) => {
+                    loading_text.set_inner_html(
+                        "<p> The app has crashed. See the developer console for details. </p>",
+                    );
+                    panic!("Failed to start eframe: {e:?}");
+                }
+            }
+        }
     });
 }

@@ -11,16 +11,16 @@ all-features = true
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
-egui = "0.27"
-egui-modal = "0.3.6"
+egui = "0.29"
+egui-modal = "0.5.0"
 log = "0.4"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 
 async-std = "1.12.0"
-egui_dock = { version = "0.12", features = ["serde"] }
-egui_extras = { version = "0.27", features = ["chrono"] }
+egui_dock = { version = "0.14", features = ["serde"] }
+egui_extras = { version = "0.29", features = ["chrono", "serde"] }
 
 # Parser
 chrono = { version = "0.4", features = ["serde"] }
@@ -38,19 +38,19 @@ strum_macros = "0.26.2"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.10"
 tokio = { version = "1.36", features = ["full"] }
-eframe = "0.27"
+eframe = "0.29.1"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 tokio_with_wasm = "0.4.3"
-wasm-logger = "0.2.0"
-eframe = { version = "0.27", default-features = false, features = [
+eframe = { version = "0.29", default-features = false, features = [
     "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
+web-sys = "0.3.70" # to access the DOM (to hide the loading text)
 
 
 [profile.release]
