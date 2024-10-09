@@ -11,9 +11,9 @@
 
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
     
-<script type="module" nonce="ARpMTDDxYPXymrstDskEmQ==">
-import init, * as bindings from 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a.js';
-const wasm = await init('https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a_bg.wasm');
+<script type="module" nonce="ubrD0Nx2Mu6pfxGI2REOJg==">
+import init, * as bindings from 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-8618061497ae0b03.js';
+const wasm = await init('https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-8618061497ae0b03_bg.wasm');
 
 
 window.wasmBindings = bindings;
@@ -36,8 +36,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
     
 
 
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon_ios_touch_192.png">
+    <link rel="manifest" href="assets/manifest.json">
+    <link rel="apple-touch-icon" href="assets/icon_ios_touch_192.png">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#404040">
 
@@ -71,17 +71,16 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             width: 100%;
         }
 
-        /* Position canvas in center-top: */
+        /* Make canvas fill entire document: */
         canvas {
             margin-right: auto;
             margin-left: auto;
             display: block;
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            top: 0%;
-            left: 50%;
-            transform: translate(-50%, 0%);
         }
 
         .centered {
@@ -129,15 +128,16 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         }
     </style>
 
-<link rel="modulepreload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a.js" crossorigin=anonymous integrity="sha384-vjYApwdugPowBjAF4+cBTPC/I556v6+5GEMsHMHf0463pPcsS/+5RhOUpPQtuqSy">
-<link rel="preload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-c7b1d3bc4465c85a_bg.wasm" crossorigin=anonymous integrity="sha384-qAT6c/zXaYt0kcf6yRHxC/MZxblUsJ37DLOy15hZNCWYlTSHVl+WYX5yJ/EGf/lN" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-8618061497ae0b03.js" crossorigin=anonymous integrity="sha384-bxSatvTbcaQJ5LuWV8cPY+od279qJgWF9x18tEtkkDE9aEXPV3i4M7ZYSYuX0dMX">
+<link rel="preload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-8618061497ae0b03_bg.wasm" crossorigin=anonymous integrity="sha384-RdyBg8P0VT4Ar0CIISWQgrV7VWo19YLAhd0OriVvhWCmQ80wXXQswuhlXuWkpYm9" as="fetch" type="application/wasm"></head>
 
 <body>
     <!-- The WASM code will resize the canvas dynamically -->
     <!-- the id is hardcoded in main.rs . so, make sure both match. -->
     <canvas id="the_canvas_id"></canvas>
 
-    <div class="centered" id="center_text">
+    <!-- the loading spinner will be removed in main.rs -->
+    <div class="centered" id="loading_text">
         <p style="font-size:16px">
             Loading…
         </p>
@@ -150,15 +150,9 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         // We disable caching during development so that we always view the latest version.
         if ('serviceWorker' in navigator && window.location.hash !== "#dev") {
             window.addEventListener('load', function () {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('sw.js');
             });
         }
-
-        document.onreadystatechange = () => {
-            if (document.readyState === 'complete') {
-                document.getElementById("center_text").innerHTML = '';
-            }
-        };
     </script>
 </body>
 
