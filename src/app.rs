@@ -191,6 +191,30 @@ impl egui_dock::TabViewer for TabViewer {
                     egui_extras::DatePickerButton::new(&mut self.second_date).id_source("Second"),
                 );
 
+                ui.separator();
+                if ui.button("Download").clicked() {
+                    use std::io::Write;
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_file_name("output.txt")
+                        .save_file()
+                    {
+                        let mut file = std::fs::File::create(path).expect("Failed to create file");
+                        file.write_all(entries_to_text(&entries).as_bytes())
+                            .expect("Failed to write file");
+                    }
+
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        download_file(
+                            "output.txt",
+                            entries_to_text(&entries).as_bytes(),
+                            "text/plain",
+                        );
+                    }
+                }
+
                 if *current_filter != *filter
                     || current_is_search != *is_search
                     || current_levels != tab.enabled_levels
@@ -569,4 +593,49 @@ impl eframe::App for TemplateApp {
             ctx.request_repaint();
         }
     }
+}
+
+fn entries_to_text(entries: &parser::Entries) -> String {
+    entries
+        .iter()
+        .map(|entry| format!("{}\t{}\t{}", entry.timestamp, entry.level, entry.message))
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+#[cfg(target_arch = "wasm32")]
+use web_sys::wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use web_sys::wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
+use web_sys::{window, Blob, BlobPropertyBag, HtmlAnchorElement, Url};
+
+#[cfg(target_arch = "wasm32")]
+fn download_file(filename: &str, content: &[u8], mime_type: &str) {
+    let array = js_sys::Array::new();
+    array.push(&JsValue::from_str(std::str::from_utf8(&content).unwrap()));
+
+    let mut blob_options = BlobPropertyBag::new();
+    blob_options.type_(mime_type);
+
+    let blob = Blob::new_with_u8_array_sequence_and_options(&array.into(), &blob_options)
+        .expect("Failed to create Blob");
+
+    let url = Url::create_object_url_with_blob(&blob).expect("Failed to create URL");
+
+    let document = window().unwrap().document().unwrap();
+    let a = document
+        .create_element("a")
+        .unwrap()
+        .dyn_into::<HtmlAnchorElement>()
+        .unwrap();
+    a.set_href(&url);
+    a.set_download(filename);
+    a.style().set_property("display", "none").unwrap();
+
+    document.body().unwrap().append_child(&a).unwrap();
+    a.click();
+    document.body().unwrap().remove_child(&a).unwrap();
+
+    Url::revoke_object_url(&url).expect("Failed to revoke URL");
 }
