@@ -51,6 +51,7 @@ eframe = { version = "0.29", default-features = false, features = [
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
 web-sys = "0.3.70" # to access the DOM (to hide the loading text)
+js-sys = "0.3.70"
 
 
 [profile.release]
