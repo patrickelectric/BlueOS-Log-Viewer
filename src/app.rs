@@ -289,7 +289,7 @@ impl egui_dock::TabViewer for TabViewer {
             table
                 .header(20.0, |mut header| {
                     header.col(|ui| {
-                        ui.strong("Timestamp");
+                        ui.strong("Timestamp (UTC)");
                     });
                     header.col(|ui| {
                         ui.strong("Level");
@@ -304,10 +304,20 @@ impl egui_dock::TabViewer for TabViewer {
                         let entry = &filtered_entries[row_index];
                         row.col(|ui| {
                             if filter.is_empty() {
-                                ui.label(&entry.timestamp.to_string());
+                                ui.label(&format!(
+                                    "{} UTC",
+                                    entry.timestamp.format("%Y-%m-%d %H:%M:%S%.3f")
+                                ));
                             } else {
                                 let mut job = LayoutJob::default();
-                                highlight_text_in_ui(&entry.timestamp.to_string(), rx, &mut job);
+                                highlight_text_in_ui(
+                                    &format!(
+                                        "{} UTC",
+                                        entry.timestamp.format("%Y-%m-%d %H:%M:%S%.3f")
+                                    ),
+                                    rx,
+                                    &mut job,
+                                );
                                 ui.label(job);
                             }
                         });
@@ -602,7 +612,14 @@ impl eframe::App for TemplateApp {
 fn entries_to_text(entries: &parser::Entries) -> String {
     entries
         .iter()
-        .map(|entry| format!("{}\t{}\t{}", entry.timestamp, entry.level, entry.message))
+        .map(|entry| {
+            format!(
+                "{} UTC\t{}\t{}",
+                entry.timestamp.format("%Y-%m-%d %H:%M:%S%.3f"),
+                entry.level,
+                entry.message
+            )
+        })
         .collect::<Vec<String>>()
         .join("\n")
 }

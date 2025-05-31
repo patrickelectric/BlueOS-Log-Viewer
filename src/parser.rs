@@ -92,7 +92,9 @@ impl LogEntry {
             .captures(line)
             .or_else(|| REGEX_DETAILED.captures(line))
             .and_then(|caps| {
-                let Ok(timestamp) = dateparser::parse(&caps["timestamp"]) else {
+                let Ok(timestamp) =
+                    dateparser::parse_with_timezone(&caps["timestamp"], &chrono::Utc)
+                else {
                     log::error!("Failed to parse timestamp");
                     return None;
                 };
