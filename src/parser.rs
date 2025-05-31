@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use dateparser;
 use flate2::read::GzDecoder;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::sync::{Arc, Mutex};
 use std::{
@@ -18,11 +19,25 @@ use tokio_with_wasm::tokio_wasm as tokio;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio;
 
-use std::sync::Once;
+static REGEX_GENERAL: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(concat!(
+        r"^(?P<timestamp>\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.\d{3,6}Z?)\s*\|\s*",
+        r"(?P<level>\S+)\s*\|\s*",
+        // r"(?P<component>[\w-]+(?:[:]\w+)?[:]\w+[:]\d+)\s*-\s*",
+        r"(?P<message>.+)$",
+    ))
+    .unwrap()
+});
 
-static mut REGEX_GENERAL: Option<Regex> = None;
-static mut REGEX_DETAILED: Option<Regex> = None;
-static INIT: Once = Once::new();
+static REGEX_DETAILED: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(concat!(
+        r"^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z)\s+",
+        r"(?P<level>\S+)\s+",
+        // r"(?P<component>[^\s]+)\s+ThreadId\(\d+\)\s+",
+        r"(?P<message>.+)$",
+    ))
+    .unwrap()
+});
 
 pub type LogBook = BTreeMap<String, Vec<LogEntry>>;
 pub type Entries = Vec<LogEntry>;
@@ -73,35 +88,9 @@ pub struct LogEntry {
 
 impl LogEntry {
     fn parse(line: &str) -> Option<Self> {
-        let (regex_general, regex_detailed) = unsafe {
-            INIT.call_once(|| {
-                REGEX_GENERAL = Some(Regex::new(
-                    concat!(
-                            r"^(?P<timestamp>\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.\d{3,6}Z?)\s*\|\s*",
-                            r"(?P<level>\S+)\s*\|\s*",
-                            // r"(?P<component>[\w-]+(?:[:]\w+)?[:]\w+[:]\d+)\s*-\s*",
-                            r"(?P<message>.+)$",
-                        )
-                    ).unwrap());
-
-                REGEX_DETAILED = Some(Regex::new(
-                    concat!(
-                            r"^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z)\s+",
-                            r"(?P<level>\S+)\s+",
-                            // r"(?P<component>[^\s]+)\s+ThreadId\(\d+\)\s+",
-                            r"(?P<message>.+)$",
-                        )
-                    ).unwrap());
-            });
-            (
-                REGEX_GENERAL.as_ref().unwrap(),
-                REGEX_DETAILED.as_ref().unwrap(),
-            )
-        };
-
-        regex_general
+        REGEX_GENERAL
             .captures(line)
-            .or_else(|| regex_detailed.captures(line))
+            .or_else(|| REGEX_DETAILED.captures(line))
             .and_then(|caps| {
                 let Ok(timestamp) = dateparser::parse(&caps["timestamp"]) else {
                     log::error!("Failed to parse timestamp");

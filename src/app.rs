@@ -1,7 +1,7 @@
 use crate::parser::{self, LogEntry, LogLevel};
 use async_std::task::current;
 use chrono::{DateTime, Datelike, Utc};
-use egui::{text::LayoutJob, Color32, FontId, RichText, TextFormat, TextStyle};
+use egui::{Color32, FontId, RichText, TextFormat, TextStyle, text::LayoutJob};
 use egui_dock::{DockArea, DockState, Style};
 use egui_modal::Modal;
 use std::collections::BTreeMap;
@@ -467,7 +467,7 @@ impl eframe::App for TemplateApp {
                     let allowed_services: Vec<String> = self
                         .service_names
                         .iter()
-                        .filter(|(_, &value)| value)
+                        .filter(|(_, value)| **value)
                         .map(|(name, _)| name)
                         .cloned()
                         .collect();
@@ -608,11 +608,11 @@ fn entries_to_text(entries: &parser::Entries) -> String {
 }
 
 #[cfg(target_arch = "wasm32")]
-use web_sys::wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
 use web_sys::wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
-use web_sys::{window, Blob, BlobPropertyBag, HtmlAnchorElement, Url};
+use web_sys::wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url, window};
 
 #[cfg(target_arch = "wasm32")]
 fn download_file(filename: &str, content: &[u8], mime_type: &str) {
