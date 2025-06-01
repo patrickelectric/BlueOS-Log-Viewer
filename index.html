@@ -12,8 +12,8 @@
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
     
 <script type="module">
-import init, * as bindings from 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-b668e37b0a9265a1.js';
-const wasm = await init({ module_or_path: 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-b668e37b0a9265a1_bg.wasm' });
+import init, * as bindings from 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-4f52530e49ae22b9.js';
+const wasm = await init({ module_or_path: 'https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-4f52530e49ae22b9_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -127,7 +127,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
             }
         }
     </style>
-<link rel="modulepreload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-b668e37b0a9265a1.js" crossorigin="anonymous" integrity="sha384-Ewnz+mittY2DiUm3dhxtIxMZGDyh544QMih+N+3oZFvKkpJcCFCcD7GUb6grPZPd"><link rel="preload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-b668e37b0a9265a1_bg.wasm" crossorigin="anonymous" integrity="sha384-3YTyLu1A0IwopV6v4c50PwHg0oeMwsjTRzlazO8XZxlEe+yv1dEWxHMPzg7tBRXI" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-4f52530e49ae22b9.js" crossorigin="anonymous" integrity="sha384-dGt0ExjW7qxKtdawJlfQbv7hr72x5LnX03Cd30DGvOCTIAxlltOdKcDQ3z3RoKCx"><link rel="preload" href="https://patrickelectric.work/BlueOS-Log-Viewer/blueos-log-viewer-4f52530e49ae22b9_bg.wasm" crossorigin="anonymous" integrity="sha384-32bU/ZVD5PCmkQlVSuvj3nU2ezuQZQ0LCPLGaaHs/USWvhZ8AkrVJZOl1J0v5HAA" as="fetch" type="application/wasm"></head>
 
 <body>
     <!-- The WASM code will resize the canvas dynamically -->
